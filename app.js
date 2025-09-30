@@ -93,3 +93,15 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`Rodando na porta ${port}`));
+const express = require('express');
+const app = express();
+const port = process.env.PORT || 3000;
+
+app.get('/', (req, res) => {
+  res.send('Página inicial do encurtador de links com senha!');
+});
+
+app.listen(port, () => {
+  console.log(`Servidor rodando em http://localhost:${port}`);
+});
+
