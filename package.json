@@ -14,3 +14,15 @@
     "dotenv": "^16.1.0"
   }
 }
+{
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "express": "...",
+    "dotenv": "...",
+    "pg": "...",
+    "bcrypt": "...",
+    "nanoid": "..."
+  }
+}
