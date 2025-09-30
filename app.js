@@ -3,8 +3,10 @@ const express = require('express');
 const { Pool } = require('pg');
 const bcrypt = require('bcrypt');
 const { customAlphabet } = require('nanoid');
+const path = require('path');
 
 const app = express();
+app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 // Gerador de código curto
@@ -31,19 +33,36 @@ const init = async () => {
 };
 init().catch(err => console.error('Erro criando tabela', err));
 
-// Criar link encurtado
+// Página inicial com formulário HTML
+app.get('/', (req, res) => {
+  res.send(`
+    <html>
+      <head>
+        <title>Encurtador com Senha</title>
+      </head>
+      <body>
+        <h1>🔐 Encurtador de Links com Senha</h1>
+        <form method="POST" action="/shorten">
+          <label>URL: <input type="text" name="url" required /></label><br><br>
+          <label>Senha (opcional): <input type="password" name="password" /></label><br><br>
+          <button type="submit">Encurtar</button>
+        </form>
+      </body>
+    </html>
+  `);
+});
+
+// Criar link encurtado via formulário ou API
 app.post('/shorten', async (req, res) => {
   try {
     const { url, password } = req.body;
     if (!url) return res.status(400).json({ error: 'url é obrigatória' });
 
-    // validar url
     try { new URL(url); } catch { return res.status(400).json({ error: 'url inválida' }); }
 
     let passHash = null;
     if (password) passHash = await bcrypt.hash(password, 10);
 
-    // gerar código único
     let code;
     for (let i = 0; i < 5; i++) {
       code = nanoid();
@@ -57,6 +76,16 @@ app.post('/shorten', async (req, res) => {
     );
 
     const full = `${process.env.APP_URL || 'http://localhost:3000'}/${code}`;
+
+    // Se veio do formulário HTML
+    if (req.headers.accept.includes('text/html')) {
+      return res.send(`
+        <p>✅ Link encurtado com sucesso:</p>
+        <a href="${full}" target="_blank">${full}</a>
+        <br><br><a href="/">Voltar</a>
+      `);
+    }
+
     res.json({ short: full, code });
   } catch (err) {
     console.error(err);
@@ -64,7 +93,7 @@ app.post('/shorten', async (req, res) => {
   }
 });
 
-// Redirecionamento
+// Redirecionamento com verificação de senha
 app.get('/:code', async (req, res) => {
   try {
     const { code } = req.params;
@@ -76,7 +105,15 @@ app.get('/:code', async (req, res) => {
     const { url, password_hash } = r.rows[0];
 
     if (password_hash) {
-      if (!password) return res.status(401).send('Senha necessária');
+      if (!password) {
+        return res.send(`
+          <form method="GET" action="/${code}">
+            <p>🔒 Este link requer senha</p>
+            <input type="password" name="password" placeholder="Digite a senha" required />
+            <button type="submit">Acessar</button>
+          </form>
+        `);
+      }
       const ok = await bcrypt.compare(password, password_hash);
       if (!ok) return res.status(403).send('Senha incorreta');
     }
@@ -91,17 +128,6 @@ app.get('/:code', async (req, res) => {
 // Health check
 app.get('/health', (req, res) => res.json({ ok: true }));
 
+// Iniciar servidor
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log(`Rodando na porta ${port}`));
-const express = require('express');
-const app = express();
-const port = process.env.PORT || 3000;
-
-app.get('/', (req, res) => {
-  res.send('Página inicial do encurtador de links com senha!');
-});
-
-app.listen(port, () => {
-  console.log(`Servidor rodando em http://localhost:${port}`);
-});
-
+app.listen(port, () => console.log(`✅ Servidor rodando em http://localhost:${port}`));
