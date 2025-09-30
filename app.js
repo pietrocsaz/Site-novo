@@ -93,3 +93,5 @@ app.get('/health', (req, res) => res.json({ ok: true }));
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => console.log(`Rodando na porta ${port}`));
+const PASSWORD = process.env.PASSWORD || "1234"; // fallback pra 1234 se não tiver env
+
